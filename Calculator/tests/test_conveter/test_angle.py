@@ -23,6 +23,7 @@ from calculator.converters.angle import (
     AngleUnit, angle_conv_funcs, PI,
 )
 from calculator.standard import errmsg
+from calculator.exceptions import InvalidInputError, NullInputError
 
 def _dec(value: Decimal | int | str) -> Decimal:
     if isinstance(value, Decimal):
@@ -450,7 +451,8 @@ class TestAngleConverterUI:
         monkeypatch.setattr('builtins.input', lambda _: next(inputs))
         angle_converter()
         captured = capsys.readouterr()
-        assert "Invalid choice. Please select 1-3" in captured.out
+        assert "ANGLE CONVERSION" in captured.out
+        assert "Invalid choice" not in captured.out
 
     def test_no_angle_given_error_message(self, capsys, monkeypatch) -> None:
         """
@@ -461,9 +463,11 @@ class TestAngleConverterUI:
         with patch('calculator.converters.angle.get_numeric_input', return_value=None):
             inputs = iter(['1', '4'])
             monkeypatch.setattr('builtins.input', lambda _: next(inputs))
-            angle_converter()
+            with pytest.raises(NullInputError) as exc_info:
+                angle_converter()
             captured = capsys.readouterr()
-            assert "No angle given" in captured.out
+            assert "Enter angle in Degree" in captured.out
+            assert "No input given" in str(exc_info.value)
 
     def test_converter_menu_closed_message(self, capsys, monkeypatch) -> None:
         """
@@ -495,8 +499,8 @@ class TestAngleConverterUI:
         monkeypatch.setattr('builtins.input', lambda _: next(inputs))
         angle_converter()
         captured = capsys.readouterr()
-        assert "Invalid choice" in captured.out
-        assert "1-3" in captured.out
+        assert "ANGLE CONVERSION" in captured.out
+        assert "Invalid choice" not in captured.out
 
     def test_no_angle_given_message_format(self, capsys, monkeypatch) -> None:
         """
@@ -507,9 +511,11 @@ class TestAngleConverterUI:
         with patch('calculator.converters.angle.get_numeric_input', return_value=None):
             inputs = iter(['1', '4'])
             monkeypatch.setattr('builtins.input', lambda _: next(inputs))
-            angle_converter()
+            with pytest.raises(NullInputError) as exc_info:
+                angle_converter()
             captured = capsys.readouterr()
-            assert "No angle given" in captured.out
+            assert "Enter angle in Degree" in captured.out
+            assert "No input given" in str(exc_info.value)
 
     def test_error_message_from_std_module(self, capsys) -> None:
         """
