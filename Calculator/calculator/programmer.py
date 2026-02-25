@@ -14,7 +14,15 @@ from __future__ import annotations
 from enum import IntEnum
 from textwrap import dedent
 
-from calculator.standard import errmsg
+from calculator.exceptions import (
+    CalculatorError,
+    InvalidInputError,
+    InvalidBaseError,
+    InvalidBitShiftError,
+    BitwiseOperationError,
+    ConversionError,
+    NullInputError
+)
 
 
 # ============================================================================
@@ -81,19 +89,34 @@ def _parse_int(raw: str) -> int:
     - Prefixes: 0x / 0X (hex), 0b / 0B (bin), 0o / 0O (oct)
     - Plain digits: decimal
     - Plain letters (A-F without prefix): treated as hex
+    
+    Raises:
+        NullInputError: If input is empty
+        InvalidBaseError: If input format is invalid
     """
     raw = raw.strip()
     if not raw:
-        raise ValueError("Empty input")
+        raise NullInputError()
     try:
         return int(raw, 0)
     except ValueError:
         # Try as plain hex (e.g. "FF" without "0x")
-        return int(raw, 16)
+        try:
+            return int(raw, 16)
+        except ValueError:
+            raise InvalidBaseError(f"\nBase Error: Cannot parse '{raw}' as a valid number.\n")
 
 
 def dec_to_hex(n: int) -> str:
-    """Convert decimal integer to uppercase hex string (no prefix)."""
+    """
+    Convert decimal integer to uppercase hex string (no prefix).
+    
+    Args:
+        n: Decimal integer to convert
+    
+    Returns:
+        Uppercase hexadecimal string
+    """
     if n < 0:
         # Two's complement hex for the current word size
         bits = int(_word_size)
@@ -102,7 +125,15 @@ def dec_to_hex(n: int) -> str:
 
 
 def dec_to_bin(n: int) -> str:
-    """Convert decimal integer to binary string padded to word size."""
+    """
+    Convert decimal integer to binary string padded to word size.
+    
+    Args:
+        n: Decimal integer to convert
+    
+    Returns:
+        Binary string grouped into nibbles
+    """
     bits = int(_word_size)
     n = _unsigned_mask(n)
     raw = bin(n)[2:]
@@ -113,14 +144,40 @@ def dec_to_bin(n: int) -> str:
 
 
 def dec_to_oct(n: int) -> str:
-    """Convert decimal integer to octal string (no prefix)."""
+    """
+    Convert decimal integer to octal string (no prefix).
+    
+    Args:
+        n: Decimal integer to convert
+    
+    Returns:
+        Octal string
+    """
     n = _unsigned_mask(n)
     return oct(n)[2:]
 
 
 def hex_to_dec(s: str) -> int:
-    """Convert hex string to signed decimal integer (respects word size)."""
-    return _mask(int(s.strip(), 16))
+    """
+    Convert hex string to signed decimal integer (respects word size).
+    
+    Args:
+        s: Hexadecimal string
+    
+    Returns:
+        Signed decimal integer
+    
+    Raises:
+        NullInputError: If input is empty
+        ConversionError: If conversion fails
+    """
+    s = s.strip()
+    if not s:
+        raise NullInputError()
+    try:
+        return _mask(int(s, 16))
+    except ValueError:
+        raise ConversionError(f"\nConversion Error: '{s}' is not a valid hexadecimal number.\n")
 
 
 def hex_to_bin(s: str) -> str:
@@ -134,9 +191,26 @@ def hex_to_oct(s: str) -> str:
 
 
 def bin_to_dec(s: str) -> int:
-    """Convert binary string to signed decimal integer."""
-    s = s.replace(" ", "")
-    return _mask(int(s, 2))
+    """
+    Convert binary string to signed decimal integer.
+    
+    Args:
+        s: Binary string (spaces allowed)
+    
+    Returns:
+        Signed decimal integer
+    
+    Raises:
+        NullInputError: If input is empty
+        ConversionError: If conversion fails
+    """
+    s = s.replace(" ", "").strip()
+    if not s:
+        raise NullInputError()
+    try:
+        return _mask(int(s, 2))
+    except ValueError:
+        raise ConversionError(f"\nConversion Error: '{s}' is not a valid binary number.\n")
 
 
 def bin_to_hex(s: str) -> str:
@@ -150,8 +224,26 @@ def bin_to_oct(s: str) -> str:
 
 
 def oct_to_dec(s: str) -> int:
-    """Convert octal string to signed decimal integer."""
-    return _mask(int(s.strip(), 8))
+    """
+    Convert octal string to signed decimal integer.
+    
+    Args:
+        s: Octal string
+    
+    Returns:
+        Signed decimal integer
+    
+    Raises:
+        NullInputError: If input is empty
+        ConversionError: If conversion fails
+    """
+    s = s.strip()
+    if not s:
+        raise NullInputError()
+    try:
+        return _mask(int(s, 8))
+    except ValueError:
+        raise ConversionError(f"\nConversion Error: '{s}' is not a valid octal number.\n")
 
 
 def oct_to_hex(s: str) -> str:
@@ -223,7 +315,19 @@ def shift_arithmetic_left(value: int, n: int) -> int:
     """
     Arithmetic shift left (ASL).
     Equivalent to multiplication by 2^n (overflow wraps within word size).
+    
+    Args:
+        value: Value to shift
+        n: Number of positions to shift
+    
+    Returns:
+        Shifted value
+    
+    Raises:
+        InvalidBitShiftError: If shift amount is negative
     """
+    if n < 0:
+        raise InvalidBitShiftError("\nShift Error: Shift amount cannot be negative.\n")
     return _mask(value << n)
 
 
@@ -231,7 +335,19 @@ def shift_arithmetic_right(value: int, n: int) -> int:
     """
     Arithmetic shift right (ASR).
     Preserves the sign bit — divides by 2^n rounding toward negative infinity.
+    
+    Args:
+        value: Value to shift
+        n: Number of positions to shift
+    
+    Returns:
+        Shifted value
+    
+    Raises:
+        InvalidBitShiftError: If shift amount is negative
     """
+    if n < 0:
+        raise InvalidBitShiftError("\nShift Error: Shift amount cannot be negative.\n")
     bits = int(_word_size)
     # Work in signed space
     signed = _mask(value)
@@ -243,7 +359,19 @@ def shift_logical_left(value: int, n: int) -> int:
     """
     Logical shift left (LSL).
     Same as arithmetic shift left; zeros fill from the right.
+    
+    Args:
+        value: Value to shift
+        n: Number of positions to shift
+    
+    Returns:
+        Shifted value
+    
+    Raises:
+        InvalidBitShiftError: If shift amount is negative
     """
+    if n < 0:
+        raise InvalidBitShiftError("\nShift Error: Shift amount cannot be negative.\n")
     return _mask(_unsigned_mask(value) << n)
 
 
@@ -251,7 +379,19 @@ def shift_logical_right(value: int, n: int) -> int:
     """
     Logical shift right (LSR).
     Zeros fill from the left regardless of sign bit.
+    
+    Args:
+        value: Value to shift
+        n: Number of positions to shift
+    
+    Returns:
+        Shifted value
+    
+    Raises:
+        InvalidBitShiftError: If shift amount is negative
     """
+    if n < 0:
+        raise InvalidBitShiftError("\nShift Error: Shift amount cannot be negative.\n")
     return _mask(_unsigned_mask(value) >> n)
 
 
@@ -259,7 +399,19 @@ def rotate_left(value: int, n: int) -> int:
     """
     Rotate left (circular shift left, ROL).
     Bits shifted out of the MSB wrap back into the LSB.
+    
+    Args:
+        value: Value to rotate
+        n: Number of positions to rotate
+    
+    Returns:
+        Rotated value
+    
+    Raises:
+        InvalidBitShiftError: If shift amount is negative
     """
+    if n < 0:
+        raise InvalidBitShiftError("\nShift Error: Rotation amount cannot be negative.\n")
     bits = int(_word_size)
     n = n % bits
     u = _unsigned_mask(value)
@@ -271,7 +423,19 @@ def rotate_right(value: int, n: int) -> int:
     """
     Rotate right (circular shift right, ROR).
     Bits shifted out of the LSB wrap back into the MSB.
+    
+    Args:
+        value: Value to rotate
+        n: Number of positions to rotate
+    
+    Returns:
+        Rotated value
+    
+    Raises:
+        InvalidBitShiftError: If shift amount is negative
     """
+    if n < 0:
+        raise InvalidBitShiftError("\nShift Error: Rotation amount cannot be negative.\n")
     bits = int(_word_size)
     n = n % bits
     u = _unsigned_mask(value)
@@ -282,41 +446,77 @@ def rotate_right(value: int, n: int) -> int:
 def rotate_left_carry(value: int, n: int, carry: int) -> tuple[int, int]:
     """
     Rotate left through carry (RCL).
-    The carry flag is treated as an extra bit, making it an (N+1)-bit rotation.
-    Returns (result, new_carry).
+    The carry bit is inserted at LSB during rotation.
+    
+    Args:
+        value: Value to rotate
+        n: Number of positions to rotate
+        carry: Initial carry bit (0 or 1)
+    
+    Returns:
+        Tuple of (rotated_value, new_carry)
+    
+    Raises:
+        InvalidBitShiftError: If shift amount is negative
+        InvalidInputError: If carry is not 0 or 1
     """
+    if n < 0:
+        raise InvalidBitShiftError("\nShift Error: Rotation amount cannot be negative.\n")
+    if carry not in (0, 1):
+        raise InvalidInputError("\nInput Error: Carry flag must be 0 or 1.\n")
+    
     bits = int(_word_size)
-    carry = carry & 1
-    n = n % (bits + 1)
+    n = n % (bits + 1)  # rotate through bits + carry
     u = _unsigned_mask(value)
-    extended = (u << 1) | carry          # bits+1 wide: value | carry at LSB
-    mask_ext = (1 << (bits + 1)) - 1
-    rotated_ext = (((extended << (n - 1)) | (extended >> (bits + 1 - (n - 1)))) & mask_ext) if n else extended
-    # Simpler iterative for clarity / correctness:
-    result_u = u
-    new_carry = carry
-    for _ in range(n % (bits + 1)):
-        msb = (result_u >> (bits - 1)) & 1
-        result_u = ((result_u << 1) | new_carry) & ((1 << bits) - 1)
-        new_carry = msb
-    return _mask(result_u), new_carry
+    
+    # Combine value and carry into extended bit string
+    extended = (u << 1) | carry
+    
+    for _ in range(n):
+        msb = (extended >> bits) & 1
+        extended = ((extended << 1) & ((1 << (bits + 1)) - 1)) | msb
+    
+    result = (extended >> 1) & ((1 << bits) - 1)
+    new_carry = extended & 1
+    return _mask(result), new_carry
 
 
 def rotate_right_carry(value: int, n: int, carry: int) -> tuple[int, int]:
     """
     Rotate right through carry (RCR).
-    The carry flag is treated as an extra bit.
-    Returns (result, new_carry).
+    The carry bit is inserted at MSB during rotation.
+    
+    Args:
+        value: Value to rotate
+        n: Number of positions to rotate
+        carry: Initial carry bit (0 or 1)
+    
+    Returns:
+        Tuple of (rotated_value, new_carry)
+    
+    Raises:
+        InvalidBitShiftError: If shift amount is negative
+        InvalidInputError: If carry is not 0 or 1
     """
+    if n < 0:
+        raise InvalidBitShiftError("\nShift Error: Rotation amount cannot be negative.\n")
+    if carry not in (0, 1):
+        raise InvalidInputError("\nInput Error: Carry flag must be 0 or 1.\n")
+    
     bits = int(_word_size)
-    carry = carry & 1
-    result_u = _unsigned_mask(value)
-    new_carry = carry
-    for _ in range(n % (bits + 1)):
-        lsb = result_u & 1
-        result_u = ((new_carry << (bits - 1)) | (result_u >> 1)) & ((1 << bits) - 1)
-        new_carry = lsb
-    return _mask(result_u), new_carry
+    n = n % (bits + 1)
+    u = _unsigned_mask(value)
+    
+    # Combine value and carry
+    extended = (u << 1) | carry
+    
+    for _ in range(n):
+        lsb = extended & 1
+        extended = (extended >> 1) | (lsb << bits)
+    
+    result = (extended >> 1) & ((1 << bits) - 1)
+    new_carry = extended & 1
+    return _mask(result), new_carry
 
 
 # ============================================================================
@@ -324,28 +524,46 @@ def rotate_right_carry(value: int, n: int, carry: int) -> tuple[int, int]:
 # ============================================================================
 
 def _get_int(prompt: str) -> int | None:
-    """Prompt user for an integer in any base."""
-    raw = input(prompt).strip()
-    if not raw:
-        return None
+    """
+    Get an integer from user, auto-detecting base.
+    
+    Args:
+        prompt: Input prompt to display
+    
+    Returns:
+        Parsed integer or None if input is invalid
+    """
     try:
+        raw = input(prompt).strip()
         return _parse_int(raw)
-    except (ValueError, OverflowError):
-        print("Error: Invalid integer. Use decimal, 0x hex, 0b binary, or 0o octal.")
+    except CalculatorError as e:
+        print(e)
+        return None
+    except (ValueError, TypeError):
+        print(InvalidInputError())
         return None
 
 
 def _get_shift_amount() -> int | None:
-    """Prompt for a shift/rotate amount."""
-    raw = input("Enter shift amount: ").strip()
+    """
+    Get a shift/rotate amount from user.
+    
+    Returns:
+        Non-negative integer or None if invalid
+    """
     try:
+        raw = input("Enter shift amount: ").strip()
+        if not raw:
+            raise NullInputError()
         n = int(raw)
         if n < 0:
-            print("Error: Shift amount must be non-negative.")
-            return None
+            raise InvalidBitShiftError()
         return n
-    except ValueError:
-        print("Error: Invalid shift amount.")
+    except CalculatorError as e:
+        print(e)
+        return None
+    except (ValueError, TypeError):
+        print(InvalidInputError())
         return None
 
 
@@ -439,7 +657,7 @@ def handle_base_conversion() -> None:
         try:
             choice = int(input("Enter choice: "))
         except (ValueError, TypeError):
-            errmsg()
+            print(InvalidInputError())
             continue
 
         if choice == 5:
@@ -448,18 +666,22 @@ def handle_base_conversion() -> None:
         if choice == 1:
             raw = input("Enter decimal value: ").strip()
             try:
+                if not raw:
+                    raise NullInputError()
                 n = int(raw)
                 _print_result(f"DEC {n}", n)
+            except CalculatorError as e:
+                print(e)
             except ValueError:
-                errmsg()
+                print(InvalidInputError("\nInput Error: Invalid decimal number.\n"))
 
         elif choice == 2:
             raw = input("Enter hex value (e.g. FF or 0xFF): ").strip()
             try:
                 n = hex_to_dec(raw.replace("0x", "").replace("0X", ""))
                 _print_result(f"HEX {raw.upper()}", n)
-            except ValueError:
-                errmsg()
+            except CalculatorError as e:
+                print(e)
 
         elif choice == 3:
             raw = input("Enter binary value (e.g. 1010 or 0b1010): ").strip()
@@ -467,8 +689,8 @@ def handle_base_conversion() -> None:
             try:
                 n = bin_to_dec(raw)
                 _print_result(f"BIN {raw}", n)
-            except ValueError:
-                errmsg()
+            except CalculatorError as e:
+                print(e)
 
         elif choice == 4:
             raw = input("Enter octal value (e.g. 377 or 0o377): ").strip()
@@ -476,10 +698,10 @@ def handle_base_conversion() -> None:
             try:
                 n = oct_to_dec(raw)
                 _print_result(f"OCT {raw}", n)
-            except ValueError:
-                errmsg()
+            except CalculatorError as e:
+                print(e)
         else:
-            errmsg()
+            print(InvalidInputError("\nInput Error: Please select 1-5.\n"))
 
 
 def handle_bitwise() -> None:
@@ -489,7 +711,7 @@ def handle_bitwise() -> None:
         try:
             choice = int(input("Enter choice: "))
         except (ValueError, TypeError):
-            errmsg()
+            print(InvalidInputError())
             continue
 
         if choice == 8:
@@ -500,12 +722,15 @@ def handle_bitwise() -> None:
             a = _get_int("Enter value A: ")
             if a is None:
                 continue
-            result = bitwise_not(a)
-            _print_result(f"NOT {a}", result)
+            try:
+                result = bitwise_not(a)
+                _print_result(f"NOT {a}", result)
+            except CalculatorError as e:
+                print(e)
             continue
 
         if choice not in range(1, 8):
-            errmsg()
+            print(InvalidInputError("\nInput Error: Please select 1-8.\n"))
             continue
 
         a = _get_int("Enter value A: ")
@@ -515,17 +740,20 @@ def handle_bitwise() -> None:
         if b is None:
             continue
 
-        ops = {
-            1: ("AND",  bitwise_and),
-            2: ("OR",   bitwise_or),
-            3: ("XOR",  bitwise_xor),
-            5: ("NAND", bitwise_nand),
-            6: ("NOR",  bitwise_nor),
-            7: ("XNOR", bitwise_xnor),
-        }
-        label_str, op_func = ops[choice]
-        result = op_func(a, b)
-        _print_result(f"{a} {label_str} {b}", result)
+        try:
+            ops = {
+                1: ("AND",  bitwise_and),
+                2: ("OR",   bitwise_or),
+                3: ("XOR",  bitwise_xor),
+                5: ("NAND", bitwise_nand),
+                6: ("NOR",  bitwise_nor),
+                7: ("XNOR", bitwise_xnor),
+            }
+            label_str, op_func = ops[choice]
+            result = op_func(a, b)
+            _print_result(f"{a} {label_str} {b}", result)
+        except CalculatorError as e:
+            print(e)
 
 
 def handle_bit_shift() -> None:
@@ -535,14 +763,14 @@ def handle_bit_shift() -> None:
         try:
             choice = int(input("Enter choice: "))
         except (ValueError, TypeError):
-            errmsg()
+            print(InvalidInputError())
             continue
 
         if choice == 9:
             break
 
         if choice not in range(1, 9):
-            errmsg()
+            print(InvalidInputError("\nInput Error: Please select 1-9.\n"))
             continue
 
         value = _get_int("Enter value: ")
@@ -552,37 +780,40 @@ def handle_bit_shift() -> None:
         if n is None:
             continue
 
-        if choice in (7, 8):
-            # Rotate through carry — need a carry input
-            try:
-                carry_raw = int(input("Enter carry flag (0 or 1): ").strip())
-                carry = carry_raw & 1
-            except (ValueError, TypeError):
-                print("Error: Carry must be 0 or 1.")
+        try:
+            if choice in (7, 8):
+                # Rotate through carry — need a carry input
+                try:
+                    carry_raw = int(input("Enter carry flag (0 or 1): ").strip())
+                    carry = carry_raw & 1
+                except (ValueError, TypeError):
+                    print(InvalidInputError("\nInput Error: Carry must be 0 or 1.\n"))
+                    continue
+
+                if choice == 7:
+                    result, new_carry = rotate_left_carry(value, n, carry)
+                    print(f"\n  ROL carry: value={value}, n={n}, carry_in={carry}")
+                    print(f"  carry_out = {new_carry}")
+                else:
+                    result, new_carry = rotate_right_carry(value, n, carry)
+                    print(f"\n  ROR carry: value={value}, n={n}, carry_in={carry}")
+                    print(f"  carry_out = {new_carry}")
+                _print_result("Result", result)
                 continue
 
-            if choice == 7:
-                result, new_carry = rotate_left_carry(value, n, carry)
-                print(f"\n  ROL carry: value={value}, n={n}, carry_in={carry}")
-                print(f"  carry_out = {new_carry}")
-            else:
-                result, new_carry = rotate_right_carry(value, n, carry)
-                print(f"\n  ROR carry: value={value}, n={n}, carry_in={carry}")
-                print(f"  carry_out = {new_carry}")
-            _print_result("Result", result)
-            continue
-
-        shift_ops = {
-            1: ("ASL", shift_arithmetic_left),
-            2: ("ASR", shift_arithmetic_right),
-            3: ("LSL", shift_logical_left),
-            4: ("LSR", shift_logical_right),
-            5: ("ROL", rotate_left),
-            6: ("ROR", rotate_right),
-        }
-        label_str, shift_func = shift_ops[choice]
-        result = shift_func(value, n)
-        _print_result(f"{value} {label_str} {n}", result)
+            shift_ops = {
+                1: ("ASL", shift_arithmetic_left),
+                2: ("ASR", shift_arithmetic_right),
+                3: ("LSL", shift_logical_left),
+                4: ("LSR", shift_logical_right),
+                5: ("ROL", rotate_left),
+                6: ("ROR", rotate_right),
+            }
+            label_str, shift_func = shift_ops[choice]
+            result = shift_func(value, n)
+            _print_result(f"{value} {label_str} {n}", result)
+        except CalculatorError as e:
+            print(e)
 
 
 # ============================================================================
@@ -596,20 +827,27 @@ def programmer_calc() -> None:
         try:
             choice = int(input("Enter choice: "))
         except (ValueError, TypeError, KeyboardInterrupt):
-            errmsg()
+            print(InvalidInputError())
             continue
 
-        if choice == 1:
-            handle_base_conversion()
-        elif choice == 2:
-            handle_bitwise()
-        elif choice == 3:
-            handle_bit_shift()
-        elif choice == 4:
-            new_ws = toggle_word_size()
-            print(f"\n  Word size set to: {WORD_SIZE_LABELS[new_ws]}\n")
-        elif choice == 5:
-            print("\n  Programmer calculator closed!\n")
-            break
-        else:
-            errmsg()
+        try:
+            if choice == 1:
+                handle_base_conversion()
+            elif choice == 2:
+                handle_bitwise()
+            elif choice == 3:
+                handle_bit_shift()
+            elif choice == 4:
+                new_ws = toggle_word_size()
+                print(f"\n  Word size set to: {WORD_SIZE_LABELS[new_ws]}\n")
+            elif choice == 5:
+                print("\n  Programmer calculator closed!\n")
+                break
+            else:
+                print(InvalidInputError("\nInput Error: Please select 1-5.\n"))
+        except CalculatorError as e:
+            print(e)
+            continue
+        except Exception as e:
+            print(f"\nSystem Error: {type(e).__name__}\n")
+            continue
