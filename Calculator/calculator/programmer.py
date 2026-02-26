@@ -1,12 +1,23 @@
 """
-Programmer Calculator Module
+Programmer Calculator Module.
 
-Provides bitwise operations, bit shifts, and bidirectional base conversions
-(DEC, HEX, BIN, OCT). All operations are performed using Python integers
-for exact, arbitrary-precision integer arithmetic — no float dependencies.
+Capabilities:
+- Base conversions between DEC / HEX / BIN / OCT (bidirectional).
+- Bitwise ops: AND, OR, XOR, NOT, NAND, NOR, XNOR.
+- Shift/rotate ops: ASL, ASR, LSL, LSR, ROL, ROR, RCL, RCR.
 
-Word size (BYTE/WORD/DWORD/QWORD) controls the bit-width mask applied to
-results, exactly like the Windows Calculator programmer mode.
+Data model:
+- Uses Python integers for exact arithmetic (no float rounding).
+- Word size (BYTE/WORD/DWORD/QWORD) applies a fixed-width mask.
+- Signed results are interpreted as two's-complement within word size.
+
+Input rules:
+- Accepts optional prefixes: 0x / 0b / 0o.
+- Hex without prefix is accepted (e.g. "FF").
+
+Error handling:
+- Raises CalculatorError subclasses for invalid input or conversions.
+- UI entry points catch and render errors without crashing.
 """
 
 from __future__ import annotations
@@ -64,7 +75,11 @@ def toggle_word_size() -> WordSize:
 
 
 def _mask(value: int) -> int:
-    """Apply the current word-size mask and interpret as a signed integer."""
+    """
+    Apply the current word-size mask and return a signed value.
+
+    Interpretation matches two's-complement rules for the active word size.
+    """
     bits = int(_word_size)
     unsigned = value & ((1 << bits) - 1)
     # Convert to two's-complement signed
@@ -74,7 +89,11 @@ def _mask(value: int) -> int:
 
 
 def _unsigned_mask(value: int) -> int:
-    """Apply the current word-size mask, keeping value unsigned."""
+    """
+    Apply the current word-size mask and return an unsigned value.
+
+    This is used for display and conversions where sign is not desired.
+    """
     bits = int(_word_size)
     return value & ((1 << bits) - 1)
 
@@ -257,7 +276,11 @@ def oct_to_bin(s: str) -> str:
 
 
 def show_all_bases(n: int) -> str:
-    """Show a number in all four bases simultaneously."""
+    """
+    Return a multi-line string showing the number in all bases.
+
+    The DEC line shows the signed value; other bases show unsigned masked form.
+    """
     u = _unsigned_mask(n)
     return (
         f"  DEC : {n}\n"
@@ -525,13 +548,9 @@ def rotate_right_carry(value: int, n: int, carry: int) -> tuple[int, int]:
 
 def _get_int(prompt: str) -> int | None:
     """
-    Get an integer from user, auto-detecting base.
-    
-    Args:
-        prompt: Input prompt to display
-    
-    Returns:
-        Parsed integer or None if input is invalid
+    Prompt for an integer and parse with auto-detected base.
+
+    Returns None when input is invalid; errors are printed to the console.
     """
     try:
         raw = input(prompt).strip()
@@ -546,10 +565,9 @@ def _get_int(prompt: str) -> int | None:
 
 def _get_shift_amount() -> int | None:
     """
-    Get a shift/rotate amount from user.
-    
-    Returns:
-        Non-negative integer or None if invalid
+    Prompt for a shift/rotate amount.
+
+    Returns a non-negative integer or None if invalid.
     """
     try:
         raw = input("Enter shift amount: ").strip()
@@ -651,7 +669,11 @@ def _print_result(label: str, value: int) -> None:
 
 
 def handle_base_conversion() -> None:
-    """Interactive base-conversion sub-menu."""
+    """
+    Interactive base-conversion sub-menu.
+
+    Converts a value from the selected base and prints all base views.
+    """
     while True:
         base_conv_menu()
         try:
@@ -705,7 +727,11 @@ def handle_base_conversion() -> None:
 
 
 def handle_bitwise() -> None:
-    """Interactive bitwise-operations sub-menu."""
+    """
+    Interactive bitwise-operations sub-menu.
+
+    Applies the chosen operation and prints all base views.
+    """
     while True:
         bitwise_menu()
         try:
@@ -757,7 +783,11 @@ def handle_bitwise() -> None:
 
 
 def handle_bit_shift() -> None:
-    """Interactive bit-shift sub-menu."""
+    """
+    Interactive bit-shift sub-menu.
+
+    Supports arithmetic/logical shifts and rotates, including carry variants.
+    """
     while True:
         shift_menu()
         try:
@@ -821,7 +851,11 @@ def handle_bit_shift() -> None:
 # ============================================================================
 
 def programmer_calc() -> None:
-    """Main programmer calculator interface."""
+    """
+    Main programmer calculator interface.
+
+    Provides the CLI menu loop and dispatches to sub-menus.
+    """
     while True:
         prog_main_menu()
         try:

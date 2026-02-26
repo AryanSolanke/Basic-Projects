@@ -1,8 +1,10 @@
 """
-Angle Converter Module
+Angle converter.
 
-Provides angle conversion functionality using Decimal arithmetic.
-Supports degree, radian, and gradian conversions.
+Features:
+- Degree, radian, and gradian conversions.
+- High-precision Decimal arithmetic for stable results.
+- Local history file recording for conversions.
 """
 
 from decimal import Decimal, localcontext
@@ -20,10 +22,10 @@ HISTORY_FILE = ANGLE_HISTORY_FILE
 
 def _compute_pi() -> Decimal:
     """
-    Evaluate value of PI using Gauss-Lengendre Algorithm
+    Compute PI using the Gauss-Legendre algorithm.
 
     Returns:
-        Value of PI with a precision of 60 decimal places.
+        PI with INTERNAL_PRECISION decimal digits.
     """
     with localcontext() as ctx:
         ctx.prec = INTERNAL_PRECISION
@@ -94,17 +96,9 @@ def convert_angle(
     angle: Decimal,
 ) -> Tuple[str, str]:
     """
-    Convert angles to two different units.
+    Convert a single input into two unit representations.
 
-    Args:
-        name1: Name of first output unit
-        func1: Conversion function for first unit
-        name2: Name of second output unit
-        func2: Conversion function for second unit
-        angle: Input angle value
-
-    Returns:
-        Tuple of two formatted conversion results
+    Returns formatted strings for display and history recording.
     """
     ans1 = f"{name1}({angle}) = {format_numeric_result(func1(angle))}"
     ans2 = f"{name2}({angle}) = {format_numeric_result(func2(angle))}"

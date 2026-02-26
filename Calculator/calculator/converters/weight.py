@@ -1,8 +1,10 @@
 """
-Weight Converter Module
+Weight converter.
 
-Provides weight conversion functionality.
-Supports comprehensive bidirectional conversions for all units.
+Features:
+- Metric and imperial/US units (13 total).
+- Single conversion path via kilograms as the base unit.
+- Shared BaseConverter UI and history handling.
 """
 
 from decimal import Decimal
@@ -65,7 +67,7 @@ def weight_conv_menuMsg() -> None:
 
 def convert_weight(value: Decimal, from_unit: int, to_unit: int) -> Decimal:
     """
-    Universal weight converter - converts ANY weight unit to ANY other weight unit.
+    Universal weight converter - converts any weight unit to any other unit.
 
     Strategy:
     1. Convert input value to kilograms (base unit)
@@ -77,7 +79,7 @@ def convert_weight(value: Decimal, from_unit: int, to_unit: int) -> Decimal:
         to_unit: Target unit (WeightUnit enum value)
 
     Returns:
-        Converted weight value as Decimal
+        Converted weight value as Decimal.
     """
     to_kg_factors = {
         WeightUnit.KILOGRAM: Decimal("1"),

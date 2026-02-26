@@ -1,15 +1,15 @@
 """
-Data Unit Converter Module
+Data unit converter.
 
-Provides comprehensive data unit conversions.
-Supports 35 units with 1,190 bidirectional conversions.
+Features:
+- 35 units and 1,190 bidirectional conversions.
+- SI (decimal) and IEC (binary) prefixes supported.
+- Converts via bits as the base unit for consistency.
 
-Units:
-- Base: Bits, Nibble, Bytes
-- Decimal (SI): Kilobits, Megabits, Gigabits, Terabits, Petabits, Exabits, Zetabits, Yottabits
-- Decimal Bytes: Kilobytes, Megabytes, Gigabytes, Terabytes, Petabytes, Exabytes, Zetabytes, Yottabytes
-- Binary (IEC): Kibibits, Mebibits, Gibibits, Tebibits, Pebibits, Exbibits, Zebibits, Yobibits
-- Binary Bytes: Kibibytes, Mebibytes, Gibibytes, Tebibytes, Pebibytes, Exbibytes, Zebibytes, Yobibytes
+Unit groups:
+- Base: Bit, Nibble, Byte
+- SI bits/bytes: K/M/G/T/P/E/Z/Y (base 1000)
+- IEC bits/bytes: Ki/Mi/Gi/Ti/Pi/Ei/Zi/Yi (base 1024)
 """
 
 from decimal import Decimal
@@ -133,9 +133,9 @@ def data_converter_menuMsg() -> None:
 
 def convert_data(value, from_unit: int, to_unit: int) -> Decimal:
     """
-    Universal data converter - converts ANY data unit to ANY other data unit.
+    Universal data converter - converts any data unit to any other unit.
     
-    This single function handles ALL 1,190 possible conversions (35x34 pairs).
+    This single function handles all 1,190 possible conversions (35x34 pairs).
     
     Strategy:
     1. Convert input value to bits (base unit)
@@ -186,7 +186,7 @@ def convert_data(value, from_unit: int, to_unit: int) -> Decimal:
         to_unit: Target unit (DataUnit enum value)
     
     Returns:
-        Converted data value as Decimal
+        Converted data value as Decimal.
     
     Examples:
         >>> convert_data(1, DataUnit.BYTE, DataUnit.BIT)
@@ -365,7 +365,7 @@ def format_data_result(result) -> str:
         result: Numerical result to format
     
     Returns:
-        String representation with appropriate precision
+        String representation with appropriate precision.
     """
     result_dec = to_decimal(result, "Data")
     if not result_dec.is_finite():

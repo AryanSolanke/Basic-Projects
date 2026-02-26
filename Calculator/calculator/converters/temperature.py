@@ -1,8 +1,10 @@
 """
-Temperature Converter Module
+Temperature converter.
 
-Provides temperature conversion functionality using Decimal arithmetic.
-Supports Celsius, Kelvin, and Fahrenheit conversions.
+Features:
+- Celsius, Kelvin, and Fahrenheit conversions.
+- Decimal arithmetic to avoid floating-point drift.
+- Shared BaseConverter UI and history handling.
 """
 
 from decimal import Decimal

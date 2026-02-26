@@ -1,5 +1,8 @@
 """
-Base converter class.
+Converter base class.
+
+Defines the shared UI flow, history handling, and formatting helpers used by
+all unit converters (temperature, pressure, weight, data, etc.).
 """
 
 from __future__ import annotations
@@ -16,6 +19,15 @@ from calculator.exceptions import NullInputError, InvalidInputError
 class BaseConverter(ABC):
     """
     Abstract base class for unit converters.
+
+    Subclasses must provide:
+    - name: Display name (e.g., "TEMPERATURE").
+    - emoji: Optional UI icon.
+    - units: Mapping of unit_id -> (unit_name, abbreviation).
+    - convert(): Core conversion logic.
+
+    Optional:
+    - history_file: Path to history file; set to None to disable history.
     """
 
     @property
@@ -101,7 +113,15 @@ class BaseConverter(ABC):
             print(f"Internal Error: Failed to clear {self.name.lower()} history")
 
     def run(self) -> None:
-        """Main conversion interface."""
+        """
+        Main conversion interface.
+
+        Flow:
+        - Display unit menu
+        - Read FROM / TO unit selection
+        - Read numeric value
+        - Convert, format, record history, print result
+        """
         try:
             self.display_menu()
 

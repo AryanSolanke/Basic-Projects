@@ -1,8 +1,10 @@
 """
-Pressure Converter Module
+Pressure converter.
 
-Provides pressure conversion functionality.
-Supports comprehensive bidirectional conversions for all units.
+Features:
+- Atmosphere, bar, kPa, mmHg, Pa, psi conversions.
+- Single conversion path via Pascals as the base unit.
+- Shared BaseConverter UI and history handling.
 """
 
 from decimal import Decimal
@@ -51,7 +53,7 @@ def pressure_conv_menuMsg() -> None:
 
 def convert_pressure(value: Decimal, from_unit: int, to_unit: int) -> Decimal:
     """
-    Universal pressure converter - converts ANY pressure unit to ANY other pressure unit.
+    Universal pressure converter - converts any pressure unit to any other unit.
 
     Strategy:
     1. Convert input value to Pascals (base unit)
@@ -63,7 +65,7 @@ def convert_pressure(value: Decimal, from_unit: int, to_unit: int) -> Decimal:
         to_unit: Target unit (PressureUnit enum value)
 
     Returns:
-        Converted pressure value as Decimal
+        Converted pressure value as Decimal.
     """
     to_pascal_factors = {
         PressureUnit.ATMOSPHERE: Decimal("101325"),

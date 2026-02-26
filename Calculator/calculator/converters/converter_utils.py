@@ -1,7 +1,10 @@
 """
-Converter Utilities
+Converter utilities.
 
-Shared helpers for converter modules.
+Shared helpers for converter modules:
+- Input parsing and validation
+- Decimal conversion with strict type checks
+- Consistent numeric formatting
 """
 
 from __future__ import annotations
@@ -13,7 +16,7 @@ from calculator.exceptions import ExpressionError, CalculatorError, NullInputErr
 
 def to_decimal(value, value_type: str = "Value") -> Decimal:
     """
-    Convert numeric values to Decimal with type checking.
+    Convert numeric values to Decimal with strict type checking.
 
     Args:
         value: Numeric value to convert (Decimal or int)
