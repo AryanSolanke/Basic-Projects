@@ -7,7 +7,7 @@ Routes to specific converter modules.
 
 from enum import IntEnum
 
-from calculator.standard import errmsg
+from calculator.utils import errmsg
 from calculator.converters.angle import angle_converter
 from calculator.converters.temperature import temperature_converter
 from calculator.converters.weight import weight_converter

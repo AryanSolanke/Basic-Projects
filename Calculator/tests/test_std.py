@@ -21,9 +21,7 @@ import os
 import pytest
 from decimal import InvalidOperation
 from pathlib import Path
-from typing import List, Tuple, Generator
-import tempfile
-import shutil
+from typing import Generator
 
 from calculator.standard import (
     errmsg,
@@ -37,7 +35,7 @@ from calculator.standard import (
     HISTORY_FILE,
     DECIMAL_PRECISION
 )
-from calculator.exceptions import ExpressionError, NullInputError, UnbalancedParenthesesError
+from calculator.exceptions import NullInputError, UnbalancedParenthesesError
 
 
 # ============================================================================
@@ -121,7 +119,7 @@ class TestFormatAnswer:
         Expected: "10000000000"
         """
         result = format_answer(1e10)
-        assert result == "1.00000000e+1"
+        assert result == "1e+10"
     
     def test_format_answer_handles_scientific_notation_input(self) -> None:
         """
@@ -336,7 +334,7 @@ class TestEvaluateExpression:
         Input: "(2+3)*4"
         Expected: "20"
         """
-        assert evaluate_expression("(2+3)*4") == "2"
+        assert evaluate_expression("(2+3)*4") == "20"
     
     def test_evaluate_expression_division_by_zero(self, temp_history_file) -> None:
         """
@@ -450,7 +448,7 @@ class TestEvaluateExpression:
         ("3*4", "12"),
         ("15/3", "5"),
         ("2**3", "8"),
-        ("0*1000", ""),
+        ("0*1000", "0"),
         ("100/100", "1"),
     ])
     def test_evaluate_expression_parametrized(
@@ -636,12 +634,12 @@ class TestIntegration:
         """
         # Evaluate and record
         result = evaluate_expression("10+20")
-        assert result == "3"
+        assert result == "30"
         
         # Check file was created
         assert temp_history_file.exists()
         content = temp_history_file.read_text()
-        assert "10+20 = 3" in content
+        assert "10+20 = 30" in content
         
         # Clear history
         clear_hist_std_calc()

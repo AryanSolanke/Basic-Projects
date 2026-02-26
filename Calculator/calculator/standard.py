@@ -6,10 +6,12 @@ Provides expression evaluation with history tracking and error handling.
 
 from calculator.exceptions import UnbalancedParenthesesError, ExpressionError, CalculatorError, NullInputError
 from enum import IntEnum
-from decimal import Decimal, InvalidOperation, localcontext
-import re
+from decimal import Decimal, InvalidOperation, DivisionByZero, localcontext
+import ast
+import operator
 
 from calculator.config import DECIMAL_PRECISION, DISPLAY_PRECISION, STD_HISTORY_FILE
+from calculator.utils import errmsg
 
 # ============================================================================
 # Constants
@@ -17,13 +19,19 @@ from calculator.config import DECIMAL_PRECISION, DISPLAY_PRECISION, STD_HISTORY_
 
 HISTORY_FILE = STD_HISTORY_FILE
 FLOAT_LIKE_MAX_EXP = 308
+MAX_EXPRESSION_LENGTH = 1000  # Prevent DoS attacks
 
-_NUMBER_PATTERN = re.compile(r"(?:\d+\.\d+|\d+|(?<![\d.])\.\d+)")
-
-
-def errmsg() -> None:
-    """Display standard error message for invalid input."""
-    print("Error: Invalid input.")
+SAFE_OPERATORS = {
+    ast.Add: operator.add,
+    ast.Sub: operator.sub,
+    ast.Mult: operator.mul,
+    ast.Div: operator.truediv,
+    ast.FloorDiv: operator.floordiv,
+    ast.Mod: operator.mod,
+    ast.Pow: operator.pow,
+    ast.UAdd: operator.pos,
+    ast.USub: operator.neg,
+}
 
 
 class StdOperation(IntEnum):
@@ -50,7 +58,15 @@ def format_answer(result: Decimal) -> str:
     if not isinstance(result, Decimal):
         result = Decimal(str(result))
     formatted_res = f"{result:.{DISPLAY_PRECISION}g}"
-    stripped_res = formatted_res.rstrip("0").rstrip(".")
+    if "e" in formatted_res or "E" in formatted_res:
+        mantissa, exp = formatted_res.split("e") if "e" in formatted_res else formatted_res.split("E")
+        if "." in mantissa:
+            mantissa = mantissa.rstrip("0").rstrip(".")
+        stripped_res = f"{mantissa}e{exp}"
+    elif "." in formatted_res:
+        stripped_res = formatted_res.rstrip("0").rstrip(".")
+    else:
+        stripped_res = formatted_res
     # Normalize negative zero
     return "0" if stripped_res == "-0" else stripped_res
 
@@ -149,6 +165,13 @@ def validate_exp(exp: str) -> bool:
     # Check for empty input
     if not exp.strip():
         raise NullInputError()
+
+    # Check expression length (DoS prevention)
+    if len(exp) > MAX_EXPRESSION_LENGTH:
+        raise ExpressionError(
+            f"Expression too long (max {MAX_EXPRESSION_LENGTH} characters). "
+            f"Got {len(exp)} characters."
+        )
     
     # Check for unbalanced parentheses
     if exp.count('(') != exp.count(')'):
@@ -168,6 +191,51 @@ def validate_exp(exp: str) -> bool:
 # Expression Evaluation
 # ============================================================================
 
+def _evaluate_node(node: ast.AST) -> Decimal:
+    """
+    Recursively evaluate an AST node safely.
+
+    Only allows arithmetic operations with numbers.
+    No function calls, no variable access, no string operations.
+    """
+    if isinstance(node, ast.Constant):
+        if isinstance(node.value, bool) or not isinstance(node.value, (int, float)):
+            raise ExpressionError("Only numbers are allowed.")
+        return Decimal(str(node.value))
+
+    if isinstance(node, ast.BinOp):
+        left = _evaluate_node(node.left)
+        right = _evaluate_node(node.right)
+
+        if type(node.op) not in SAFE_OPERATORS:
+            raise ExpressionError(
+                f"Operation {node.op.__class__.__name__} not allowed"
+            )
+
+        op_func = SAFE_OPERATORS[type(node.op)]
+        with localcontext() as ctx:
+            ctx.prec = max(DECIMAL_PRECISION, 28)
+            result = op_func(left, right)
+
+        return Decimal(str(result))
+
+    if isinstance(node, ast.UnaryOp):
+        operand = _evaluate_node(node.operand)
+
+        if type(node.op) not in SAFE_OPERATORS:
+            raise ExpressionError(
+                f"Operation {node.op.__class__.__name__} not allowed"
+            )
+
+        op_func = SAFE_OPERATORS[type(node.op)]
+        return op_func(operand)
+
+    raise ExpressionError(
+        f"Forbidden syntax: {node.__class__.__name__}. "
+        "Only numbers and basic arithmetic (+, -, *, /, %, //, **) allowed."
+    )
+
+
 def evaluate_expression(exp: str) -> str:
     """
     Evaluate arithmetic expression and return formatted result.
@@ -181,13 +249,9 @@ def evaluate_expression(exp: str) -> str:
     try:
         if not validate_exp(exp):
             return "0"
-    
-        decimal_exp = _NUMBER_PATTERN.sub(
-            lambda m: f"Decimal('{m.group(0)}')", exp
-        )
-        with localcontext() as ctx:
-            ctx.prec = max(DECIMAL_PRECISION, 28)
-            result = eval(decimal_exp, {"Decimal": Decimal})
+
+        tree = ast.parse(exp, mode="eval")
+        result = _evaluate_node(tree.body)
 
         if not isinstance(result, Decimal):
             result = Decimal(str(result))
@@ -201,9 +265,13 @@ def evaluate_expression(exp: str) -> str:
         formatted_result = format_answer(result)
         record_history_std_calc(exp, formatted_result)
         return formatted_result 
-    except ZeroDivisionError:
+    except (ZeroDivisionError, DivisionByZero):
         raise InvalidOperation("Math error: Cannot divide by zero.")
     
+    except ExpressionError:
+        errmsg()
+        return "0"
+
     except InvalidOperation:
         raise ExpressionError("Math error: Invalid mathematical operation")
     
