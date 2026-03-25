@@ -1,10 +1,10 @@
 """
 Advanced Modular Calculator - Main Entry Point
 
-Console-based calculator with standard arithmetic, scientific functions,
-unit conversions, and a full programmer calculator.
+Desktop-first calculator entry point with a CLI fallback.
 """
 
+import argparse
 from enum import IntEnum
 
 from calculator.standard import (
@@ -46,11 +46,11 @@ def mode_choice_menu() -> None:
 
 
 # ============================================================================
-# Main Entry Point
+# CLI Entry Point
 # ============================================================================
 
-def main() -> None:
-    """Main application loop."""
+def cli_main() -> None:
+    """Run the legacy console calculator."""
     print("\n" + "="*50)
     print("   Welcome to Advanced Modular Calculator!")
     print("="*50)
@@ -87,6 +87,39 @@ def main() -> None:
 
     except (KeyboardInterrupt, EOFError):
         print("\nProgram interrupted by user. Thank you for using Calculator!")
+
+
+def main(argv: list[str] | None = None) -> None:
+    """
+    Launch the desktop UI by default.
+
+    Use ``--cli`` to force the legacy console interface.
+    """
+    parser = argparse.ArgumentParser(
+        description="Advanced Modular Calculator",
+    )
+    parser.add_argument(
+        "--cli",
+        action="store_true",
+        help="Run the legacy console interface instead of the desktop UI.",
+    )
+    args = parser.parse_args(argv)
+
+    if args.cli:
+        cli_main()
+        return
+
+    try:
+        from tkinter import TclError
+    except ImportError:
+        TclError = RuntimeError
+
+    try:
+        from calculator.gui import launch_gui
+        launch_gui()
+    except (ImportError, TclError) as exc:
+        print(f"\nGUI unavailable ({exc}). Falling back to CLI mode.\n")
+        cli_main()
 
 
 if __name__ == '__main__':

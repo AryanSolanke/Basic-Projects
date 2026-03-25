@@ -414,7 +414,11 @@ class TestInverseTrigonometricFunctions:
         for val in [-1000, 0, 1000]:
             result = tangent_inv(val)
             assert -90 < result < 90
-    
+
+    def test_tangent_inv_exact_one(self) -> None:
+        """atan(1) should resolve promptly to 45 degrees."""
+        assert abs(tangent_inv(1) - 45) < 1e-9
+
     def test_cot_inv_special_case_zero(self) -> None:
         """
         Test that cot⁻¹(0) = 90°.
@@ -428,6 +432,10 @@ class TestInverseTrigonometricFunctions:
             "cot⁻¹", cot_inv, 0
         )
         assert "90" in result
+
+    def test_cot_inv_exact_one(self) -> None:
+        """acot(1) should resolve promptly to 45 degrees."""
+        assert abs(cot_inv(1) - 45) < 1e-9
     
     def test_sec_inv_domain_valid(self) -> None:
         """Test arcsec with |x| >= 1."""

@@ -1,6 +1,6 @@
 # 🧮 Advanced Modular Calculator
 
-A robust, enterprise-grade console-based Python calculator featuring modular architecture, comprehensive unit conversions, and extensive mathematical functions. Built with clean code principles, domain-driven design, and test-driven development.
+A robust, enterprise-grade Python calculator featuring a desktop UI, a console fallback, modular architecture, comprehensive unit conversions, and extensive mathematical functions. Built with clean code principles, domain-driven design, and test-driven development.
 
 ## 🌟 Features Overview
 
@@ -83,6 +83,7 @@ Comprehensive conversion system supporting **5 categories**:
 Calculator/
 │
 ├── calculator.py               # Import shim preserving `calculator.*`
+├── gui.py                      # Tkinter desktop application
 ├── main.py                     # Application entry point
 ├── standard.py                 # Standard arithmetic engine
 ├── scientific.py               # Scientific functions engine
@@ -147,7 +148,14 @@ Calculator/
    ```bash
    python main.py
    ```
-   Or:
+   This launches the desktop UI by default.
+
+   Use the legacy console mode when needed:
+   ```bash
+   python main.py --cli
+   ```
+
+   Or install the console entry point:
    ```bash
    calculator
    ```

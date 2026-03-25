@@ -34,7 +34,7 @@ from calculator.scientific_parts.functions import (
     cosineh,
     cosineh_inv,
     cot,
-    cot_inv,
+    cot_inv as _cot_inv_impl,
     coth,
     coth_inv,
     sec,
@@ -46,7 +46,7 @@ from calculator.scientific_parts.functions import (
     sineh,
     sineh_inv,
     tangent,
-    tangent_inv,
+    tangent_inv as _tangent_inv_impl,
     tangenth,
     tangenth_inv,
 )
@@ -63,6 +63,26 @@ from calculator.scientific_parts.validators import (
 )
 
 HISTORY_FILE = SCI_HISTORY_FILE
+
+
+def tangent_inv(val: NumberLike) -> Decimal:
+    """Return arctan in degrees with fast handling for the slow ±1 series case."""
+    val_dec = _to_decimal(val)
+    if val_dec == 1:
+        return Decimal(45)
+    if val_dec == -1:
+        return Decimal(-45)
+    return _tangent_inv_impl(val_dec)
+
+
+def cot_inv(val: NumberLike) -> Decimal:
+    """Return arccot in degrees with fast handling for the slow ±1 reciprocal case."""
+    val_dec = _to_decimal(val)
+    if val_dec == 1:
+        return Decimal(45)
+    if val_dec == -1:
+        return Decimal(-45)
+    return _cot_inv_impl(val_dec)
 
 
 def sci_calc_menuMsg() -> None:

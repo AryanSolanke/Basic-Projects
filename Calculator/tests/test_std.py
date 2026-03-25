@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Generator
 
 from calculator.standard import (
+    compute_expression,
     errmsg,
     format_answer,
     record_history_std_calc,
@@ -35,7 +36,7 @@ from calculator.standard import (
     HISTORY_FILE,
     DECIMAL_PRECISION
 )
-from calculator.exceptions import NullInputError, UnbalancedParenthesesError
+from calculator.exceptions import ExpressionError, NullInputError, UnbalancedParenthesesError
 
 
 # ============================================================================
@@ -308,6 +309,15 @@ class TestValidateExp:
 
 class TestEvaluateExpression:
     """Test suite for evaluate_expression function."""
+
+    def test_compute_expression_basic_addition(self, temp_history_file) -> None:
+        """The strict UI-facing evaluator should return formatted results."""
+        assert compute_expression("2+2") == "4"
+
+    def test_compute_expression_invalid_characters_raise(self, temp_history_file) -> None:
+        """The strict evaluator should raise instead of printing for bad input."""
+        with pytest.raises(ExpressionError):
+            compute_expression("abc")
     
     def test_evaluate_expression_basic_addition(self, temp_history_file) -> None:
         """

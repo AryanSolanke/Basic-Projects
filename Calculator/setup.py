@@ -3,6 +3,7 @@ from setuptools import setup
 
 ROOT_MODULES = [
     "calculator",
+    "gui",
     "main",
     "standard",
     "scientific",

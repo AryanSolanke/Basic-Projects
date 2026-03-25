@@ -54,6 +54,12 @@ def test_word_size_toggle() -> None:
     _reset_word_size(prog.WordSize.QWORD)
 
 
+def test_word_size_setter() -> None:
+    _check("set word size to BYTE", prog.set_word_size(prog.WordSize.BYTE), prog.WordSize.BYTE)
+    _check("getter returns BYTE", prog.get_word_size(), prog.WordSize.BYTE)
+    _reset_word_size(prog.WordSize.QWORD)
+
+
 # ============================================================================
 # Mask / Signed Wrapping Tests
 # ============================================================================
@@ -98,6 +104,16 @@ def test_dec_to_bin() -> None:
     _check("BYTE 255 -> 1111 1111", result, "1111 1111")
     result_zero = prog.dec_to_bin(0)
     _check("BYTE 0 -> 0000 0000", result_zero, "0000 0000")
+    _reset_word_size(prog.WordSize.QWORD)
+
+
+def test_show_all_bases_map() -> None:
+    _reset_word_size(prog.WordSize.BYTE)
+    bases = prog.show_all_bases_map(255)
+    _check("bases map DEC", bases["DEC"], "255")
+    _check("bases map HEX", bases["HEX"], "FF")
+    _check("bases map BIN", bases["BIN"], "1111 1111")
+    _check("bases map OCT", bases["OCT"], "377")
     _reset_word_size(prog.WordSize.QWORD)
 
 
@@ -278,11 +294,13 @@ def test_shift_by_zero() -> None:
 def run_all() -> None:
     suites = [
         test_word_size_toggle,
+        test_word_size_setter,
         test_mask_byte,
         test_unsigned_mask_byte,
         test_dec_to_hex,
         test_dec_to_oct,
         test_dec_to_bin,
+        test_show_all_bases_map,
         test_hex_to_dec,
         test_bin_to_dec,
         test_oct_to_dec,

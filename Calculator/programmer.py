@@ -44,6 +44,12 @@ def get_word_size() -> WordSize:
     return _word_size
 
 
+def set_word_size(word_size: WordSize | int) -> WordSize:
+    global _word_size
+    _word_size = WordSize(word_size)
+    return _word_size
+
+
 def toggle_word_size() -> WordSize:
     global _word_size
     idx = WORD_SIZE_CYCLE.index(_word_size)
@@ -112,13 +118,23 @@ def oct_to_bin(s: str) -> str:
 
 
 def show_all_bases(n: int) -> str:
-    u = _unsigned_mask(n)
+    bases = show_all_bases_map(n)
     return (
-        f"  DEC : {n}\n"
-        f"  HEX : {dec_to_hex(u)}\n"
-        f"  BIN : {dec_to_bin(u)}\n"
-        f"  OCT : {dec_to_oct(u)}"
+        f"  DEC : {bases['DEC']}\n"
+        f"  HEX : {bases['HEX']}\n"
+        f"  BIN : {bases['BIN']}\n"
+        f"  OCT : {bases['OCT']}"
     )
+
+
+def show_all_bases_map(n: int) -> dict[str, str]:
+    u = _unsigned_mask(n)
+    return {
+        "DEC": str(n),
+        "HEX": dec_to_hex(u),
+        "BIN": dec_to_bin(u),
+        "OCT": dec_to_oct(u),
+    }
 
 
 def bitwise_and(a: int, b: int) -> int:

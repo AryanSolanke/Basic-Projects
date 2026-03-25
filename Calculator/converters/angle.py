@@ -11,6 +11,7 @@ from decimal import Decimal, localcontext
 from typing import Tuple, Callable, Dict
 from enum import IntEnum
 
+from calculator.converters.base import BaseConverter
 from calculator.exceptions import CalculatorError, NullInputError, InvalidInputError
 from calculator.converters.converter_utils import get_numeric_input, format_numeric_result, to_decimal
 from calculator.config import ANGLE_HISTORY_FILE
@@ -88,6 +89,46 @@ def to_grad(angle: Decimal) -> Decimal:
     return to_decimal(angle, "Angle") * Decimal(200) / Decimal(180)
 
 
+def grad_to_deg(angle: Decimal) -> Decimal:
+    """Convert gradians to degrees."""
+    return to_decimal(angle, "Angle") * Decimal(180) / Decimal(200)
+
+
+def rad_to_grad(angle: Decimal) -> Decimal:
+    """Convert radians to gradians."""
+    return to_grad(to_deg(angle))
+
+
+def grad_to_rad(angle: Decimal) -> Decimal:
+    """Convert gradians to radians."""
+    return to_rads(grad_to_deg(angle))
+
+
+def convert_angle_value(value: Decimal, from_unit: int, to_unit: int) -> Decimal:
+    """Convert an angle from any supported unit to any other."""
+    normalized_value = to_decimal(value, "Angle")
+    if from_unit == to_unit:
+        return normalized_value
+
+    if from_unit == AngleUnit.DEGREE:
+        degrees = normalized_value
+    elif from_unit == AngleUnit.RADIAN:
+        degrees = to_deg(normalized_value)
+    elif from_unit == AngleUnit.GRADIAN:
+        degrees = grad_to_deg(normalized_value)
+    else:
+        raise InvalidInputError("Invalid angle unit.")
+
+    if to_unit == AngleUnit.DEGREE:
+        return degrees
+    if to_unit == AngleUnit.RADIAN:
+        return to_rads(degrees)
+    if to_unit == AngleUnit.GRADIAN:
+        return to_grad(degrees)
+
+    raise InvalidInputError("Invalid angle unit.")
+
+
 def convert_angle(
     name1: str,
     func1: Callable[[Decimal], Decimal],
@@ -146,13 +187,41 @@ def clear_hist_angle_conv() -> None:
 # ============================================================================
 
 angle_conv_choices = ["Degree", "Radians", "Gradians"]
+ANGLE_UNIT_NAMES = {
+    AngleUnit.DEGREE: "Degree",
+    AngleUnit.RADIAN: "Radian",
+    AngleUnit.GRADIAN: "Gradian",
+}
+ANGLE_UNIT_ABBREV = {
+    AngleUnit.DEGREE: "deg",
+    AngleUnit.RADIAN: "rad",
+    AngleUnit.GRADIAN: "grad",
+}
 
 # Angle conversion configurations: (output1_name, func1, output2_name, func2)
 angle_conv_funcs: Dict[int, Tuple[str, Callable, str, Callable]] = {
     AngleUnit.DEGREE: ("rad", to_rads, "grad", to_grad),
-    AngleUnit.RADIAN: ("deg", to_deg, "grad", to_grad),
-    AngleUnit.GRADIAN: ("deg", to_deg, "rad", to_rads),
+    AngleUnit.RADIAN: ("deg", to_deg, "grad", rad_to_grad),
+    AngleUnit.GRADIAN: ("deg", grad_to_deg, "rad", grad_to_rad),
 }
+
+
+class AngleConverter(BaseConverter):
+    """Generic angle converter compatible with the shared converter UI."""
+
+    name = "ANGLE"
+    emoji = ""
+    history_file = HISTORY_FILE
+    units = {unit: (ANGLE_UNIT_NAMES[unit], ANGLE_UNIT_ABBREV[unit]) for unit in ANGLE_UNIT_NAMES}
+
+    def convert(self, value: Decimal, from_unit: int, to_unit: int) -> Decimal:
+        return convert_angle_value(value, from_unit, to_unit)
+
+    def display_menu(self) -> None:
+        angle_conversion_menuMsg()
+
+    def get_value_prompt(self, unit_name: str) -> str:
+        return f"\nEnter angle in {unit_name}: "
 
 
 # ============================================================================

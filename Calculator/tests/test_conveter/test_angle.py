@@ -19,6 +19,7 @@ from calculator.converters.angle import (
     to_deg,
     to_grad,
     convert_angle,
+    convert_angle_value,
     angle_converter,
     AngleUnit, angle_conv_funcs, PI,
 )
@@ -193,6 +194,16 @@ class TestConvertAngleFunction:
         ans1, ans2 = convert_angle("rad", to_rads, "grad", to_grad, 45)
         assert "0.785398" in ans1 or "0.78539" in ans1  # π/4 ≈ 0.785398
         assert "50" in ans2
+
+    def test_convert_angle_value_handles_radian_to_gradian(self) -> None:
+        """Generic conversion should correctly route radian to gradian."""
+        result = convert_angle_value(PI / 2, AngleUnit.RADIAN, AngleUnit.GRADIAN)
+        _assert_close(result, 100)
+
+    def test_convert_angle_value_handles_gradian_to_radian(self) -> None:
+        """Generic conversion should correctly route gradian to radian."""
+        result = convert_angle_value(200, AngleUnit.GRADIAN, AngleUnit.RADIAN)
+        _assert_close(result, PI)
 
 
 # ============================================================================

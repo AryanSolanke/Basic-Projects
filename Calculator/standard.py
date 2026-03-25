@@ -162,6 +162,21 @@ def validate_exp(exp: str) -> bool:
     Returns:
         True if valid, False otherwise
     """
+    try:
+        _validate_exp_strict(exp)
+        return True
+    except ExpressionError as e:
+        print(str(e).strip())
+        return False
+
+
+def _validate_exp_strict(exp: str) -> None:
+    """
+    Strictly validate an expression and raise on invalid characters.
+
+    This keeps the CLI-compatible ``validate_exp`` behavior intact while also
+    exposing a non-printing validation path for the desktop UI.
+    """
     # Check for empty input
     if not exp.strip():
         raise NullInputError()
@@ -172,19 +187,50 @@ def validate_exp(exp: str) -> bool:
             f"Expression too long (max {MAX_EXPRESSION_LENGTH} characters). "
             f"Got {len(exp)} characters."
         )
-    
+
     # Check for unbalanced parentheses
     if exp.count('(') != exp.count(')'):
         raise UnbalancedParenthesesError()
-    
+
     # Check for allowed characters
     allowed_chars = "0123456789+-*/%(). "
     for char in exp:
         if char not in allowed_chars:
-            print("Error: Invalid Expression. Please enter a valid character [0123456789+-*/%(). ]")
-            return False
+            raise ExpressionError(
+                "Error: Invalid Expression. Please enter a valid character "
+                "[0123456789+-*/%(). ]"
+            )
 
-    return True
+
+def compute_expression(exp: str, *, save_history: bool = True) -> str:
+    """
+    Evaluate an arithmetic expression without CLI-style printing.
+
+    Args:
+        exp: Arithmetic expression to evaluate
+        save_history: Whether to persist the result to history
+
+    Returns:
+        Formatted result string
+    """
+    _validate_exp_strict(exp)
+
+    tree = ast.parse(exp, mode="eval")
+    result = _evaluate_node(tree.body)
+
+    if not isinstance(result, Decimal):
+        result = Decimal(str(result))
+
+    if not result.is_finite():
+        raise InvalidOperation("Math error: result is not finite")
+
+    if result.is_finite() and result.adjusted() > FLOAT_LIKE_MAX_EXP:
+        raise OverflowError("Math error: Result overflowed.")
+
+    formatted_result = format_answer(result)
+    if save_history:
+        record_history_std_calc(exp, formatted_result)
+    return formatted_result
 
 
 # ============================================================================
@@ -247,24 +293,7 @@ def evaluate_expression(exp: str) -> str:
         Formatted result string, or "0" if evaluation fails
     """
     try:
-        if not validate_exp(exp):
-            return "0"
-
-        tree = ast.parse(exp, mode="eval")
-        result = _evaluate_node(tree.body)
-
-        if not isinstance(result, Decimal):
-            result = Decimal(str(result))
-
-        if not result.is_finite():
-            raise InvalidOperation("Math error: result is not finite")
-        
-        if result.is_finite() and result.adjusted() > FLOAT_LIKE_MAX_EXP:
-            raise OverflowError("Math error: Result overflowed.")
-        
-        formatted_result = format_answer(result)
-        record_history_std_calc(exp, formatted_result)
-        return formatted_result 
+        return compute_expression(exp)
     except (ZeroDivisionError, DivisionByZero):
         raise InvalidOperation("Math error: Cannot divide by zero.")
     
