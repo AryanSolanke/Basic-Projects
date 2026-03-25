@@ -25,6 +25,11 @@ venv/
 .vscode/
 *.log
 
+# --- History Files ---
+history/
+**/history/
+*_history.txt
+
 # --- SQLTools / Project Settings ---
 .vscode/
 *.json
